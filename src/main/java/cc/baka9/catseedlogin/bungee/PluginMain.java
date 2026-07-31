@@ -15,7 +15,18 @@ public class PluginMain extends Plugin {
         Config.load();
         getProxy().getPluginManager().registerListener(this, new Listeners());
         getProxy().getPluginManager().registerCommand(this, new Commands("CatSeedLoginBungee", "catseedlogin.admin", "cslb"));
+        getLogger().info("Config.Enable = " + Config.Enable + ", Host = " + Config.Host + ", Port = " + Config.Port);
+        if (Config.Enable) {
+            getLogger().info("Starting Communication...");
+            Communication.start();
+        } else {
+            getLogger().warning("BungeeCord integration is disabled in config");
+        }
+    }
 
+    @Override
+    public void onDisable() {
+        Communication.stop();
     }
 
     public static ScheduledTask runAsync(Runnable runnable) {

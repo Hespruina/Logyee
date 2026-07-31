@@ -172,7 +172,8 @@ public class Listeners implements Listener {
             if (!player.isDead() || Config.Settings.DeathStateQuitRecordLocation) {
                 Config.setOfflineLocation(player);
             }
-            Bukkit.getScheduler().runTaskLater(CatSeedLogin.instance, () -> LoginPlayerHelper.remove(player.getName()), Config.Settings.ReenterInterval);
+            // 不通知 Bungee，玩家可能只是切换子服，由 Bungee 端判断真正的退出
+            Bukkit.getScheduler().runTaskLater(CatSeedLogin.instance, () -> LoginPlayerHelper.remove(player.getName(), false), Config.Settings.ReenterInterval);
         }
         Task.getTaskAutoKick().playerJoinTime.remove(player.getName());
 

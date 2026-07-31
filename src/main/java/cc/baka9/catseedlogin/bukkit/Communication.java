@@ -8,18 +8,31 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
 /**
- * bukkit 与 bc 的通讯交流
+ * bukkit 与 bc 的长连接通讯交流
  */
 public class Communication {
     private static ServerSocket serverSocket;
+    private static volatile Socket clientSocket;
+    private static volatile BufferedWriter clientWriter;
+    private static final Object WRITE_LOCK = new Object();
+
+    private static void log(String message) {
+        CatSeedLogin.instance.getLogger().info("[Comm] " + message);
+    }
+
+    private static void logWarn(String message) {
+        CatSeedLogin.instance.getLogger().warning("[Comm] " + message);
+    }
 
     /**
      * 异步关闭 socket server
@@ -29,7 +42,12 @@ public class Communication {
     }
 
     public static void socketServerStop() {
-
+        try {
+            if (clientSocket != null && !clientSocket.isClosed()) {
+                clientSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
         if (serverSocket != null && !serverSocket.isClosed()) {
             try {
                 serverSocket.close();
@@ -37,7 +55,6 @@ public class Communication {
                 e.printStackTrace();
             }
         }
-
     }
 
     /**
@@ -48,89 +65,180 @@ public class Communication {
     }
 
     /**
-     * 启动 socket server 监听bc端发来的请求
+     * 启动 socket server 监听bc端发来的长连接
      */
     private static void socketServerStart() {
         try {
             InetAddress inetAddress = InetAddress.getByName(Config.BungeeCord.Host);
             serverSocket = new ServerSocket(Integer.parseInt(Config.BungeeCord.Port), 50, inetAddress);
+            log("ServerSocket started on " + Config.BungeeCord.Host + ":" + Config.BungeeCord.Port);
             while (!serverSocket.isClosed()) {
                 Socket socket;
                 try {
                     socket = serverSocket.accept();
-                    handleRequest(socket);
                 } catch (IOException e) {
                     break;
                 }
+                log("Accepted connection from " + socket.getRemoteSocketAddress());
+                synchronized (WRITE_LOCK) {
+                    if (clientSocket != null && !clientSocket.isClosed()) {
+                        try {
+                            clientSocket.close();
+                        } catch (IOException ignored) {
+                        }
+                    }
+                    clientSocket = socket;
+                    try {
+                        clientWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+                    } catch (IOException e) {
+                        logWarn("Failed to get output stream: " + e.getMessage());
+                        try {
+                            socket.close();
+                        } catch (IOException ignored) {
+                        }
+                        continue;
+                    }
+                }
+                new Thread(new ClientReader(socket), "CatSeedLogin-Comm-Reader").start();
             }
         } catch (UnknownHostException e) {
-            CatSeedLogin.instance.getLogger().warning("无法解析域名或IP地址");
+            logWarn("Unable to resolve address: " + Config.BungeeCord.Host);
             e.printStackTrace();
         } catch (IOException e) {
+            logWarn("ServerSocket error: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
+    private static class ClientReader implements Runnable {
+        private final Socket socket;
 
-    /**
-     * 处理请求
-     */
-    private static void handleRequest(Socket socket) throws IOException {
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        String requestType = bufferedReader.readLine();
-        String playerName = bufferedReader.readLine();
-        switch (requestType) {
-            case "Connect":
-                handleConnectRequest(socket, playerName);
-                break;
-            case "KeepLoggedIn":
-                String time = bufferedReader.readLine();
-                String sign = bufferedReader.readLine();
-                handleKeepLoggedInRequest(playerName, time, sign);
-                socket.close();
-                break;
-            default:
-                break;
+        ClientReader(Socket socket) {
+            this.socket = socket;
+        }
+
+        @Override
+        public void run() {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(" ", -1);
+                    if (parts.length == 0) continue;
+                    if (!parts[0].equals("PING")) {
+                        log("Received: " + line);
+                    }
+                    String type = parts[0];
+                    switch (type) {
+                        case "CONNECT":
+                            if (parts.length >= 2) {
+                                handleConnectRequest(parts[1]);
+                            }
+                            break;
+                        case "KEEP_LOGGED_IN":
+                            if (parts.length >= 4) {
+                                handleKeepLoggedInRequest(parts[1], parts[2], parts[3]);
+                            }
+                            break;
+                        case "PING":
+                            if (parts.length >= 2) {
+                                sendLineQuiet("PONG " + parts[1]);
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            } catch (IOException e) {
+                logWarn("ClientReader IOException: " + e.getMessage());
+            } finally {
+                synchronized (WRITE_LOCK) {
+                    if (clientSocket == socket) {
+                        clientSocket = null;
+                        clientWriter = null;
+                    }
+                }
+                logWarn("Connection closed");
+            }
         }
     }
 
     private static void handleKeepLoggedInRequest(String playerName, String time, String sign) {
-        // 验证请求的合法性
-        // 对比玩家名，时间戳，和authKey加密的结果（加密是因为如果登录服不在内网环境下，则可能会被人使用这个功能给发包来直接绕过登录）
+        log("Processing KEEP_LOGGED_IN for " + playerName);
         if (CommunicationAuth.encryption(playerName, time, Config.BungeeCord.AuthKey).equals(sign)) {
-            // 切换主线程给予登录状态
+            log("KEEP_LOGGED_IN auth success for " + playerName);
             Bukkit.getScheduler().runTask(CatSeedLogin.instance, () -> {
                 LoginPlayer lp = Cache.getIgnoreCase(playerName);
                 if (lp != null) {
-                    LoginPlayerHelper.add(lp);
+                    LoginPlayerHelper.add(lp, false);
+                    log("KEEP_LOGGED_IN added " + playerName + " to login set (no notify)");
                     Player player = Bukkit.getPlayerExact(playerName);
                     if (player != null) {
                         player.updateInventory();
                     }
+                } else {
+                    logWarn("KEEP_LOGGED_IN player " + playerName + " not found in cache");
                 }
-
             });
+        } else {
+            logWarn("KEEP_LOGGED_IN auth failed for " + playerName);
         }
     }
 
-    private static void handleConnectRequest(Socket socket, String playerName) {
-        // 切换主线程获取是否已登录
+    private static void handleConnectRequest(String playerName) {
+        log("Processing CONNECT for " + playerName);
         Bukkit.getScheduler().runTask(CatSeedLogin.instance, () -> {
             boolean result = LoginPlayerHelper.isLogin(playerName);
-
-            // 切换异步线程返回结果
-            CatSeedLogin.instance.runTaskAsync(() -> {
-                try {
-                    socket.getOutputStream().write(result ? 1 : 0);
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-
-            });
-
+            log("CONNECT result for " + playerName + " = " + result);
+            sendLine("CONNECT_RESULT " + playerName + " " + (result ? 1 : 0));
         });
     }
 
+    private static void sendLine(String line) {
+        sendLine(line, true);
+    }
 
+    private static void sendLineQuiet(String line) {
+        sendLine(line, false);
+    }
+
+    private static void sendLine(String line, boolean logMessage) {
+        synchronized (WRITE_LOCK) {
+            if (clientWriter != null) {
+                try {
+                    clientWriter.write(line);
+                    clientWriter.newLine();
+                    clientWriter.flush();
+                    if (logMessage) {
+                        log("Sent: " + line);
+                    }
+                } catch (IOException e) {
+                    logWarn("sendLine failed: " + e.getMessage());
+                    try {
+                        if (clientSocket != null) {
+                            clientSocket.close();
+                        }
+                    } catch (IOException ignored) {
+                    }
+                }
+            } else {
+                logWarn("sendLine failed: clientWriter is null");
+            }
+        }
+    }
+
+    public static void notifyPlayerLogin(String playerName) {
+        if (!Config.BungeeCord.Enable) {
+            return;
+        }
+        log("notifyPlayerLogin: " + playerName);
+        CatSeedLogin.instance.runTaskAsync(() -> sendLine("PLAYER_LOGIN " + playerName));
+    }
+
+    public static void notifyPlayerLogout(String playerName) {
+        if (!Config.BungeeCord.Enable) {
+            return;
+        }
+        log("notifyPlayerLogout: " + playerName);
+        CatSeedLogin.instance.runTaskAsync(() -> sendLine("PLAYER_LOGOUT " + playerName));
+    }
 }

@@ -1,4 +1,4 @@
-package cc.baka9.catseedlogin.bungee;
+package cc.baka9.catseedlogin.velocity;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -11,7 +11,16 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * bc 与 bukkit 的长连接通讯交流
+ * Velocity 与 Bukkit 的长连接通讯（Socket 客户端）。
+ * <p>
+ * 协议与 BungeeCord 端完全一致，两端可互换：
+ * <ul>
+ *   <li>Bungee/Velocity -> Bukkit: {@code CONNECT <playerName>} 查询登录状态</li>
+ *   <li>Bukkit -> Bungee/Velocity: {@code CONNECT_RESULT <playerName> <0/1>}</li>
+ *   <li>Bukkit -> Bungee/Velocity: {@code PLAYER_LOGIN <playerName>} / {@code PLAYER_LOGOUT}</li>
+ *   <li>Bungee/Velocity -> Bukkit: {@code KEEP_LOGGED_IN <player> <time> <sign>}</li>
+ *   <li>心跳: PING / PONG</li>
+ * </ul>
  */
 public class Communication {
 
@@ -25,11 +34,11 @@ public class Communication {
     private static volatile boolean connected = false;
 
     private static void log(String message) {
-        PluginMain.instance.getLogger().info("[Comm] " + message);
+        PluginMain.getInstance().getLogger().info("[Comm] " + message);
     }
 
     private static void logWarn(String message) {
-        PluginMain.instance.getLogger().warning("[Comm] " + message);
+        PluginMain.getInstance().getLogger().warn("[Comm] " + message);
     }
 
     public static boolean isConnected() {
@@ -38,7 +47,7 @@ public class Communication {
 
     public static void start() {
         running = true;
-        new Thread(Communication::connectLoop, "CatSeedLogin-Comm-Connect").start();
+        new Thread(Communication::connectLoop, "CatSeedLogin-Velocity-Comm-Connect").start();
     }
 
     public static void stop() {
@@ -66,7 +75,7 @@ public class Communication {
                 connected = true;
                 lastPongTime = System.currentTimeMillis();
                 log("Connected to Bukkit " + Config.Host + ":" + Config.Port);
-                new Thread(Communication::readLoop, "CatSeedLogin-Comm-Reader").start();
+                new Thread(Communication::readLoop, "CatSeedLogin-Velocity-Comm-Reader").start();
                 PluginMain.runAsync(Communication::heartbeatLoop);
             } catch (IOException e) {
                 logWarn("Connection failed: " + e.getMessage() + ", retrying in 5s...");
@@ -122,14 +131,12 @@ public class Communication {
                         if (parts.length >= 2) {
                             log("Processing PLAYER_LOGIN for " + parts[1]);
                             Listeners.markLoggedIn(parts[1]);
-                            log("Marked " + parts[1] + " as logged in");
                         }
                         break;
                     case "PLAYER_LOGOUT":
                         if (parts.length >= 2) {
                             log("Processing PLAYER_LOGOUT for " + parts[1]);
                             Listeners.markLoggedOut(parts[1]);
-                            log("Marked " + parts[1] + " as logged out");
                         }
                         break;
                     case "PONG":

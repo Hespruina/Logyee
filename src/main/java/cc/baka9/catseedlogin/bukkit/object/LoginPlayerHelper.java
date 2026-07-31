@@ -23,20 +23,36 @@ public class LoginPlayerHelper {
     }
 
     public static void add(LoginPlayer lp){
-        synchronized (set) {
+        add(lp, true);
+    }
 
+    public static void add(LoginPlayer lp, boolean notifyBungee){
+        synchronized (set) {
             set.add(lp);
+        }
+        if (notifyBungee) {
+            cc.baka9.catseedlogin.bukkit.Communication.notifyPlayerLogin(lp.getName());
         }
     }
 
     public static void remove(LoginPlayer lp){
-        synchronized (set) {
+        remove(lp, true);
+    }
 
+    public static void remove(LoginPlayer lp, boolean notifyBungee){
+        synchronized (set) {
             set.remove(lp);
+        }
+        if (notifyBungee) {
+            cc.baka9.catseedlogin.bukkit.Communication.notifyPlayerLogout(lp.getName());
         }
     }
 
     public static void remove(String name){
+        remove(name, true);
+    }
+
+    public static void remove(String name, boolean notifyBungee){
         synchronized (set) {
             for (LoginPlayer lp : set) {
                 if (lp.getName().equals(name)) {
@@ -44,6 +60,9 @@ public class LoginPlayerHelper {
                     break;
                 }
             }
+        }
+        if (notifyBungee) {
+            cc.baka9.catseedlogin.bukkit.Communication.notifyPlayerLogout(name);
         }
     }
 
@@ -103,10 +122,6 @@ public class LoginPlayerHelper {
             itemListModifier.write(0, Arrays.asList(blankInventory));
         }
 
-        try {
-            protocolManager.sendServerPacket(player, inventoryPacket, false);
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
+        protocolManager.sendServerPacket(player, inventoryPacket, false);
     }
 }
