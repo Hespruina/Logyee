@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>cc.baka9</groupId>
-    <artifactId>CatSeedLogin</artifactId>
-    <version>1.4.1-SNAPSHOT</version>
+    <groupId>top.zhrhello</groupId>
+    <artifactId>Logyee</artifactId>
+    <version>1.0</version>
 
-    <name>CatSeedLogin</name>
+    <name>Logyee</name>
     <url>https://www.mcbbs.net/thread-847859-1-1.html</url>
 
     <properties>
@@ -172,7 +172,7 @@
                     <relocations>
                         <relocation>
                             <pattern>org.yaml.snakeyaml</pattern>
-                            <shadedPattern>cc.baka9.catseedlogin.libs.snakeyaml</shadedPattern>
+                            <shadedPattern>top.zhrhello.logyee.libs.snakeyaml</shadedPattern>
                         </relocation>
                     </relocations>
                     <filters>

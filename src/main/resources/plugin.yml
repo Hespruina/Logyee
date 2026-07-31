@@ -1,6 +1,6 @@
-name: CatSeedLogin
-main: cc.baka9.catseedlogin.bukkit.CatSeedLogin
-author: CatSeed
+name: Logyee
+main: top.zhrhello.logyee.bukkit.Logyee
+author: zhrhello
 version: ${version}
 softdepend: [Multiverse-Core, Citizens, Essentials, EssentialsSpawn, ProtocolLib]
 api-version: 1.13
@@ -31,11 +31,11 @@ commands:
     description: 修改密码
     usage: /<command> 旧密码 新密码 重复新密码
     aliases: [changepw]
-  catseedlogin:
+  logyee:
     description: 管理员管理指令
     usage:
       |
-      §d§lCatSeedLogin 管理指令:
+      §d§lLogyee 管理指令:
       §a/<command> commandWhiteListAdd [指令] §9添加登陆之前允许执行的指令 (支持正则表达式)
       §a/<command> commandWhiteListDel [指令] §9删除登陆之前允许执行的指令 (支持正则表达式)
       §a/<command> commandWhiteListInfo §9查看登陆之前允许执行的指令 (支持正则表达式)
@@ -53,5 +53,5 @@ commands:
       §e/<command> delPlayer [玩家名] §9管理员强制删除账户
       §e/<command> setPwd [玩家名] [密码] §9管理员强制设置玩家密码
       §3/<command> reload §9重载配置文件
-    aliases: [cslogin]
-    permission: catseedlogin.command.catseedlogin
+    aliases: [logy]
+    permission: logyee.command.logyee

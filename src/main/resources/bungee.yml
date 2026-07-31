@@ -1,4 +1,4 @@
-name: CatSeedLogin-Bungee
-main: cc.baka9.catseedlogin.bungee.PluginMain
+name: Logyee-Bungee
+main: top.zhrhello.logyee.bungee.PluginMain
 version: ${version}
-author: CatSeed
+author: zhrhello
