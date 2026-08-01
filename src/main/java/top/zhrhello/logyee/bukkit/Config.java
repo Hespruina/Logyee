@@ -14,8 +14,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * 加载/保存/重载 yml配置文件
@@ -81,7 +79,7 @@ public class Config {
         public static long ReenterInterval;
         public static boolean AfterLoginBack;
         public static boolean CanTpSpawnLocation;
-        public static List<Pattern> CommandWhiteList = new ArrayList<>();
+        public static List<String> CommandWhiteList = new ArrayList<>();
         public static int AutoKick;
         // 死亡状态退出游戏是否记录退出位置 (玩家可以通过死亡时退出服务器然后重新进入，再复活，登录返回死亡地点)
         public static boolean DeathStateQuitRecordLocation;
@@ -104,7 +102,7 @@ public class Config {
                 commandWhiteList = resourceConfig.getStringList("CommandWhiteList");
             }
             Settings.CommandWhiteList.clear();
-            Settings.CommandWhiteList.addAll(commandWhiteList.stream().map(Pattern::compile).collect(Collectors.toList()));
+            Settings.CommandWhiteList.addAll(commandWhiteList);
             AutoKick = config.getInt("AutoKick", 120);
             SpawnLocation = str2Location(config.getString("SpawnLocation"));
             DeathStateQuitRecordLocation = config.getBoolean("DeathStateQuitRecordLocation", resourceConfig.getBoolean("DeathStateQuitRecordLocation"));
@@ -126,7 +124,7 @@ public class Config {
             config.set("CanTpSpawnLocation", CanTpSpawnLocation);
             config.set("AutoKick", AutoKick);
             config.set("SpawnLocation", loc2String(SpawnLocation));
-            config.set("CommandWhiteList", CommandWhiteList.stream().map(Pattern::toString).collect(Collectors.toList()));
+            config.set("CommandWhiteList", CommandWhiteList);
             config.set("DeathStateQuitRecordLocation", DeathStateQuitRecordLocation);
             try {
                 config.save(new File(Logyee.instance.getDataFolder(), "settings.yml"));

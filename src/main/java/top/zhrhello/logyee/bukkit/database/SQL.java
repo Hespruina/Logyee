@@ -9,9 +9,12 @@ import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public abstract class SQL {
     protected JavaPlugin plugin;
+
+    public static final ReentrantReadWriteLock RW_LOCK = new ReentrantReadWriteLock();
 
     public SQL(JavaPlugin plugin){
         this.plugin = plugin;
@@ -41,37 +44,56 @@ public abstract class SQL {
 
 
     public void add(LoginPlayer lp) throws Exception{
-        flush(new BufferStatement("INSERT INTO accounts (name,password,lastAction,email,ips) VALUES(?,?,?,?,?)",
-                lp.getName(), lp.getPassword(), new Date(), lp.getEmail(), lp.getIps()));
-        Cache.refresh(lp.getName());
+        RW_LOCK.readLock().lock();
+        try {
+            flush(new BufferStatement("INSERT INTO accounts (name,password,lastAction,email,ips) VALUES(?,?,?,?,?)",
+                    lp.getName(), lp.getPassword(), new Date(), lp.getEmail(), lp.getIps()));
+            Cache.refresh(lp.getName());
+        } finally {
+            RW_LOCK.readLock().unlock();
+        }
     }
 
     public void del(String name) throws Exception{
-        flush(new BufferStatement("DELETE FROM accounts WHERE name = ?", name));
-        Cache.refresh(name);
+        RW_LOCK.readLock().lock();
+        try {
+            flush(new BufferStatement("DELETE FROM accounts WHERE name = ?", name));
+            Cache.refresh(name);
+        } finally {
+            RW_LOCK.readLock().unlock();
+        }
     }
 
     public void edit(LoginPlayer lp) throws Exception{
-        flush(new BufferStatement("UPDATE accounts SET password = ?, lastAction = ?, email = ?, ips = ? WHERE name= ?"
-                , lp.getPassword(), new Date(), lp.getEmail(), lp.getIps(), lp.getName()));
-        Cache.refresh(lp.getName());
+        RW_LOCK.readLock().lock();
+        try {
+            flush(new BufferStatement("UPDATE accounts SET password = ?, lastAction = ?, email = ?, ips = ? WHERE name= ?"
+                    , lp.getPassword(), new Date(), lp.getEmail(), lp.getIps(), lp.getName()));
+            Cache.refresh(lp.getName());
+        } finally {
+            RW_LOCK.readLock().unlock();
+        }
     }
 
     public LoginPlayer get(String name) throws Exception{
-        PreparedStatement ps = new BufferStatement("SELECT * FROM accounts WHERE name = ?",
-                name).prepareStatement(getConnection());
-
-        ResultSet resultSet = ps.executeQuery();
-        LoginPlayer lp = null;
-        if (resultSet.next()) {
-            lp = new LoginPlayer(name, resultSet.getString("password"));
-            lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
-            lp.setEmail(resultSet.getString("email"));
-            lp.setIps(resultSet.getString("ips"));
+        RW_LOCK.readLock().lock();
+        try {
+            PreparedStatement ps = new BufferStatement("SELECT * FROM accounts WHERE name = ?",
+                    name).prepareStatement(getConnection());
+            ResultSet resultSet = ps.executeQuery();
+            LoginPlayer lp = null;
+            if (resultSet.next()) {
+                lp = new LoginPlayer(name, resultSet.getString("password"));
+                lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
+                lp.setEmail(resultSet.getString("email"));
+                lp.setIps(resultSet.getString("ips"));
+            }
+            resultSet.close();
+            ps.close();
+            return lp;
+        } finally {
+            RW_LOCK.readLock().unlock();
         }
-        resultSet.close();
-        ps.close();
-        return lp;
     }
 
     public List<LoginPlayer> getAll() throws Exception{
@@ -136,12 +158,15 @@ public abstract class SQL {
     }
 
     public void close() {
+        RW_LOCK.writeLock().lock();
         try {
             Connection conn = getConnection();
             if (conn != null && !conn.isClosed()) {
                 conn.close();
             }
         } catch (Exception ignored) {
+        } finally {
+            RW_LOCK.writeLock().unlock();
         }
     }
 }

@@ -15,10 +15,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 public class CommandLogyee implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String lable, String[] args){
@@ -81,10 +77,7 @@ public class CommandLogyee implements CommandExecutor {
             String[] cmd = new String[args.length - 1];
             System.arraycopy(args, 1, cmd, 0, cmd.length);
             String regex = String.join(" ", cmd);
-            List<String> collect = Config.Settings.CommandWhiteList.stream().map(Pattern::toString).collect(Collectors.toList());
-            if (collect.contains(regex)) {
-                collect.remove(regex);
-                Config.Settings.CommandWhiteList = collect.stream().map(Pattern::compile).collect(Collectors.toList());
+            if (Config.Settings.CommandWhiteList.remove(regex)) {
                 Config.Settings.save();
                 sender.sendMessage("§e已删除登录前可执行指令 " + regex);
             } else {
@@ -99,25 +92,25 @@ public class CommandLogyee implements CommandExecutor {
         if (args.length > 1 && args[0].equalsIgnoreCase("commandWhiteListAdd")) {
             String[] cmd = new String[args.length - 1];
             System.arraycopy(args, 1, cmd, 0, cmd.length);
-            String regex = String.join(" ", cmd);
-            if (regex.length() > 256) {
-                sender.sendMessage("§c正则表达式过长!");
+            String cmdName = String.join(" ", cmd).trim().toLowerCase();
+            if (cmdName.isEmpty()) {
+                sender.sendMessage("§c指令名不能为空!");
                 return true;
             }
-            Pattern pattern;
-            try {
-                pattern = Pattern.compile(regex);
-            } catch (java.util.regex.PatternSyntaxException e) {
-                sender.sendMessage("§c无效的正则表达式: " + e.getMessage());
+            if (cmdName.length() > 64) {
+                sender.sendMessage("§c指令名过长!");
                 return true;
             }
-            List<String> collect = Config.Settings.CommandWhiteList.stream().map(Pattern::toString).collect(Collectors.toList());
-            if (collect.contains(regex)) {
-                sender.sendMessage("§c已经存在 " + regex);
+            if (!cmdName.matches("^[a-zA-Z0-9_\\-]+$")) {
+                sender.sendMessage("§c指令名只能包含字母、数字、下划线和连字符!");
+                return true;
+            }
+            if (Config.Settings.CommandWhiteList.contains(cmdName)) {
+                sender.sendMessage("§c已经存在 " + cmdName);
             } else {
-                Config.Settings.CommandWhiteList.add(pattern);
+                Config.Settings.CommandWhiteList.add(cmdName);
                 Config.Settings.save();
-                sender.sendMessage("§e已添加登录前可执行指令 " + regex);
+                sender.sendMessage("§e已添加登录前可执行指令 " + cmdName);
             }
             return true;
         }
@@ -127,7 +120,7 @@ public class CommandLogyee implements CommandExecutor {
     private boolean commandWhiteListInfo(CommandSender sender, String[] args){
         if (args.length > 0 && args[0].equalsIgnoreCase("commandWhiteListInfo")) {
             sender.sendMessage("§e登录前可执行指令: ");
-            Config.Settings.CommandWhiteList.forEach(cmdRegex -> sender.sendMessage(cmdRegex.toString()));
+            Config.Settings.CommandWhiteList.forEach(cmdName -> sender.sendMessage(cmdName));
             return true;
         }
         return false;
@@ -333,18 +326,19 @@ public class CommandLogyee implements CommandExecutor {
     private boolean reload(CommandSender sender, String[] args){
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             Config.reload();
-            if (Logyee.sql != null) {
-                Logyee.sql.close();
-            }
-            Logyee.sql = Config.MySQL.Enable ? new MySQL(Logyee.instance) : new SQLite(Logyee.instance);
+            top.zhrhello.logyee.bukkit.database.SQL.RW_LOCK.writeLock().lock();
             try {
-
+                if (Logyee.sql != null) {
+                    Logyee.sql.close();
+                }
+                Logyee.sql = Config.MySQL.Enable ? new MySQL(Logyee.instance) : new SQLite(Logyee.instance);
                 Logyee.sql.init();
-
                 Cache.refreshAll();
             } catch (Exception e) {
                 Logyee.instance.getLogger().warning("§c加载数据库时出错");
                 e.printStackTrace();
+            } finally {
+                top.zhrhello.logyee.bukkit.database.SQL.RW_LOCK.writeLock().unlock();
             }
 
             Communication.socketServerStopAsync();

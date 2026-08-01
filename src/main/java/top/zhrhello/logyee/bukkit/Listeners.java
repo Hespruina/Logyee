@@ -17,10 +17,12 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 
-import java.util.ArrayList;
-import java.util.regex.Pattern;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Listeners implements Listener {
+
+    private static final ConcurrentHashMap<String, AtomicInteger> ipCountMap = new ConcurrentHashMap<>();
 
     private boolean playerIsNotMinecraftPlayer(Player p){
         return !p.getClass().getName().matches("org\\.bukkit\\.craftbukkit.*?\\.entity\\.CraftPlayer");
@@ -30,9 +32,15 @@ public class Listeners implements Listener {
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event){
         if (playerIsNotMinecraftPlayer(event.getPlayer())) return;
         if (LoginPlayerHelper.isLogin(event.getPlayer().getName())) return;
-        String input = event.getMessage().toLowerCase();
-        for (Pattern regex : Config.Settings.CommandWhiteList) {
-            if (regex.matcher(input).find()) return;
+        String input = event.getMessage().toLowerCase().trim();
+        if (!input.startsWith("/")) return;
+        String commandName = input.substring(1).split("\\s+")[0];
+        int colonIndex = commandName.indexOf(':');
+        if (colonIndex > 0) {
+            commandName = commandName.substring(colonIndex + 1);
+        }
+        for (String whiteCmd : Config.Settings.CommandWhiteList) {
+            if (whiteCmd.equalsIgnoreCase(commandName)) return;
         }
         event.setCancelled(true);
 
@@ -57,16 +65,11 @@ public class Listeners implements Listener {
         }
         if (Config.Settings.IpCountLimit <= 0) return;
         if (event.getAddress() == null) return;
-        int count = 0;
         String hostAddress = event.getAddress().getHostAddress();
-        for (Player p : new ArrayList<>(Bukkit.getOnlinePlayers())) {
-            if (p.getAddress() != null && hostAddress.equals(p.getAddress().getAddress().getHostAddress())) {
-                count++;
-            }
-            if (count >= Config.Settings.IpCountLimit) {
-                event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "太多相同ip的账号同时在线!");
-                return;
-            }
+        AtomicInteger counter = ipCountMap.get(hostAddress);
+        if (counter != null && counter.get() >= Config.Settings.IpCountLimit) {
+            event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "太多相同ip的账号同时在线!");
+            return;
         }
 
 
@@ -171,6 +174,13 @@ public class Listeners implements Listener {
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event){
         Player player = event.getPlayer();
+        if (player.getAddress() != null && player.getAddress().getAddress() != null) {
+            String ip = player.getAddress().getAddress().getHostAddress();
+            AtomicInteger c = ipCountMap.get(ip);
+            if (c != null && c.decrementAndGet() <= 0) {
+                ipCountMap.remove(ip);
+            }
+        }
         if (LoginPlayerHelper.isLogin(player.getName())) {
             if (!player.isDead() || Config.Settings.DeathStateQuitRecordLocation) {
                 Config.setOfflineLocation(player);
@@ -186,6 +196,9 @@ public class Listeners implements Listener {
     public void onPlayerJoin(PlayerJoinEvent event){
         Player p = event.getPlayer();
         Cache.refresh(p.getName());
+        if (p.getAddress() != null && p.getAddress().getAddress() != null) {
+            ipCountMap.computeIfAbsent(p.getAddress().getAddress().getHostAddress(), k -> new AtomicInteger()).incrementAndGet();
+        }
         if (Config.Settings.CanTpSpawnLocation) {
             p.teleport(Config.Settings.SpawnLocation);
         }

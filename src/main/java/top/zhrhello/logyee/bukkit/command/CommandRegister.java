@@ -66,10 +66,10 @@ public class CommandRegister implements CommandExecutor {
                     LoginPlayer lp = new LoginPlayer(name, args[0]);
                     lp.crypt();
                     Logyee.sql.add(lp);
-                    LoginPlayerHelper.add(lp);
                     Bukkit.getScheduler().runTask(Logyee.instance, () -> {
                         Player syncPlayer = Bukkit.getPlayer(playerUuid);
                         if (syncPlayer != null && syncPlayer.isOnline()) {
+                            LoginPlayerHelper.add(lp);
                             LogyeePlayerRegisterEvent event = new LogyeePlayerRegisterEvent(syncPlayer);
                             Bukkit.getServer().getPluginManager().callEvent(event);
                             syncPlayer.sendMessage(Config.Language.REGISTER_SUCCESS);

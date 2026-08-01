@@ -30,9 +30,8 @@ public class SQLite extends SQL {
                 return null;
             }
         } else {
-            if (!plugin.getDataFolder().mkdirs()) {
-                plugin.getLogger().warning("Failed to create data folder!");
-                return null;
+            if (!plugin.getDataFolder().mkdirs() && !plugin.getDataFolder().isDirectory()) {
+                throw new SQLException("Failed to create data directory: " + plugin.getDataFolder().getAbsolutePath());
             }
             return this.getConnection();
         }

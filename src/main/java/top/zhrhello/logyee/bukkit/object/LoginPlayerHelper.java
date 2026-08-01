@@ -85,7 +85,7 @@ public class LoginPlayerHelper {
 
     // 记录登录IP
     public static void recordCurrentIP(Player player, LoginPlayer lp){
-        if (player.getAddress() == null) return;
+        if (player.getAddress() == null || player.getAddress().getAddress() == null) return;
         String currentIp = player.getAddress().getAddress().getHostAddress();
         List<String> ipsList = lp.getIpsList();
         ipsList.add(currentIp);
