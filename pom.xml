@@ -64,6 +64,14 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- bStats 统计（BungeeCord 端，同样 relocate 到本插件包下） -->
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bungeecord</artifactId>
+            <version>3.2.1</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- SpigotAPI -->
         <dependency>
             <groupId>org.spigotmc</groupId>
