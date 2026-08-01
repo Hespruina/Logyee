@@ -9,6 +9,9 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.slf4j.Logger;
 
+import top.zhrhello.logyee.libs.bstats.charts.SingleLineChart;
+import top.zhrhello.logyee.libs.bstats.velocity.Metrics;
+
 import java.nio.file.Path;
 
 /**
@@ -32,17 +35,26 @@ public class PluginMain {
     private final ProxyServer proxy;
     private final Logger logger;
     private final Path dataDirectory;
+    private final Metrics.Factory metricsFactory;
 
     @Inject
-    public PluginMain(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory) {
+    public PluginMain(ProxyServer proxy, Logger logger, @DataDirectory Path dataDirectory, Metrics.Factory metricsFactory) {
         this.proxy = proxy;
         this.logger = logger;
         this.dataDirectory = dataDirectory;
+        this.metricsFactory = metricsFactory;
         instance = this;
     }
 
     @Subscribe
     public void onInitialize(ProxyInitializeEvent event) {
+        // bStats 统计
+        int pluginId = 33059;
+        Metrics metrics = metricsFactory.make(this, pluginId);
+
+        // 代理下挂的子服数量
+        metrics.addCustomChart(new SingleLineChart("sub_server_count", () -> proxy.getAllServers().size()));
+
         Config.load();
         proxy.getEventManager().register(this, new Listeners());
         logger.info("Config.Enable = {}, Host = {}, Port = {}", Config.Enable, Config.Host, Config.Port);
