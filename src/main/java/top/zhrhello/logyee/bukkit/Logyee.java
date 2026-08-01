@@ -16,6 +16,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
+import top.zhrhello.logyee.libs.bstats.bukkit.Metrics;
+import top.zhrhello.logyee.libs.bstats.charts.SimplePie;
+import top.zhrhello.logyee.libs.bstats.charts.SingleLineChart;
+
 public class Logyee extends JavaPlugin {
 
     public static Logyee instance;
@@ -26,6 +30,18 @@ public class Logyee extends JavaPlugin {
     @Override
     public void onEnable(){
         instance = this;
+
+        // bStats 统计
+        int pluginId = 33056;
+        Metrics metrics = new Metrics(this, pluginId);
+
+        // 存储后端类型（MySQL / SQLite）
+        metrics.addCustomChart(new SimplePie("storage", () -> Config.MySQL.Enable ? "MySQL" : "SQLite"));
+        // 已注册玩家总数（取自缓存，启动后异步加载完成）
+        metrics.addCustomChart(new SingleLineChart("registered_players", () -> Cache.getAllLoginPlayer().size()));
+        // 当前在线且已登录的玩家数
+        metrics.addCustomChart(new SingleLineChart("online_logged_in", () -> LoginPlayerHelper.getList().size()));
+
         //Config
         try {
             Config.load();
