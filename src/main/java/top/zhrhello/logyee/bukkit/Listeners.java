@@ -19,6 +19,8 @@ import org.bukkit.event.player.*;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 public class Listeners implements Listener {
 
@@ -26,6 +28,15 @@ public class Listeners implements Listener {
 
     private boolean playerIsNotMinecraftPlayer(Player p){
         return !p.getClass().getName().matches("org\\.bukkit\\.craftbukkit.*?\\.entity\\.CraftPlayer");
+    }
+
+    // 白名单条目为 Java 正则：对整条指令(含/)或仅指令名(不含/)做全匹配
+    private boolean matchesWhiteList(String pattern, String text){
+        try {
+            return Pattern.compile(pattern).matcher(text).matches();
+        } catch (PatternSyntaxException e) {
+            return false;
+        }
     }
 
     @EventHandler
@@ -40,7 +51,8 @@ public class Listeners implements Listener {
             commandName = commandName.substring(colonIndex + 1);
         }
         for (String whiteCmd : Config.Settings.CommandWhiteList) {
-            if (whiteCmd.equalsIgnoreCase(commandName)) return;
+            // 白名单条目为 Java 正则，匹配整条指令消息(含/)或仅指令名(不含/)
+            if (matchesWhiteList(whiteCmd, input) || matchesWhiteList(whiteCmd, commandName)) return;
         }
         event.setCancelled(true);
 

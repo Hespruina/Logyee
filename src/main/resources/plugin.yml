@@ -35,23 +35,21 @@ commands:
     description: 管理员管理指令
     usage:
       |
-      §d§lLogyee 管理指令:
-      §a/<command> commandWhiteListAdd [指令] §9添加登陆之前允许执行的指令 (支持正则表达式)
-      §a/<command> commandWhiteListDel [指令] §9删除登陆之前允许执行的指令 (支持正则表达式)
-      §a/<command> commandWhiteListInfo §9查看登陆之前允许执行的指令 (支持正则表达式)
-      §b/<command> setIpRegCountLimit [数量] §9设置相同ip注册限制 （默认数量2）
-      §b/<command> setIpCountLimit [数量] §9设置相同ip登录限制 （默认数量2）
-      §b/<command> setIdLength [最短] [最长] §9设置游戏名最小和最大长度 (默认最小是2 最大是15)
-      §b/<command> setReenterInterval [间隔] §9离开服务器重新进入间隔限制 单位：tick (1秒等于20tick) (默认60tick)
-      §b/<command> setAutoKick [秒数] §9设置自动踢出未登录的玩家 (默认120秒，小于1秒则关闭此功能)
-      §b/<command> setSpawnLocation §9设置玩家登陆地点为你站着的位置 (默认登陆地点为world世界的出生点)
-      §c/<command> limitChineseID  §9打开/关闭 限制中文游戏名 (默认打开)
-      §c/<command> beforeLoginNoDamage §9打开/关闭 登陆之前是否受到伤害 (默认登陆之前不受到伤害)
-      §c/<command> afterLoginBack §9打开/关闭 登陆之后是否返回退出地点 (默认打开)
-      §c/<command> canTpSpawnLocation §9打开/关闭 登录之前是否强制在登陆地点 (默认打开)
-      §c/<command> deathStateQuitRecordLocation §9打开/关闭 死亡状态退出游戏记录退出位置 (默认打开)
-      §e/<command> delPlayer [玩家名] §9管理员强制删除账户
-      §e/<command> setPwd [玩家名] [密码] §9管理员强制设置玩家密码
-      §3/<command> reload §9重载配置文件
-    aliases: [logy]
+      §d§lLogyee 管理指令 (主命令可缩写 /ly):
+      §a/<command> set/see cmdwhitelist|cw add|rm [指令] §9登录前允许执行的指令(支持正则)
+      §a/<command> set/see ipreg|ir [数量] §9相同ip注册限制(默认2)
+      §a/<command> set/see ipjoin|ij [数量] §9相同ip登录限制(默认2)
+      §a/<command> set/see name|nm least|long [值] §9游戏名最小/最大长度(默认2/15)
+      §a/<command> set/see reconnect|re [间隔] §9离开服务器重进间隔tick(默认60)
+      §a/<command> set/see autokick|ak [秒数] §9自动踢出未登录(默认120,<1关闭)
+      §a/<command> set/see/tp Spawn §9登录地点(默认world出生点)
+      §a/<command> set/see chineseid|cnid on/off §9限制中文游戏名(默认开)
+      §a/<command> set/see nodamage|nd on/off §9登录前免伤(默认开)
+      §a/<command> set/see alb|afterloginback on/off §9登录后回退出点(默认开)
+      §a/<command> set/see forceloginlocation|fsl on/off §9登录前强制在登录点(默认开)
+      §a/<command> set/see deathrecord|dr on/off §9死亡退出记录位置(默认开)
+      §e/<command> rmplayer|rmp [玩家名] §9管理员强制删除账户
+      §e/<command> setpwd|sp [玩家名] [密码] §9管理员强制设置密码
+      §3/<command> reload|re §9重载配置文件
+    aliases: [ly, logy]
     permission: logyee.command.logyee

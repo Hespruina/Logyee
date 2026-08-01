@@ -108,6 +108,7 @@ public class Logyee extends JavaPlugin {
         });
         PluginCommand logyee = getServer().getPluginCommand("logyee");
         logyee.setExecutor(new CommandLogyee());
+        logyee.setTabCompleter(new CommandLogyee());
 
         //Task
         Task.runAll();
