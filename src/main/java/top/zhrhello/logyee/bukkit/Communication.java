@@ -228,6 +228,7 @@ public class Communication {
 
     public static void notifyPlayerLogin(String playerName) {
         if (!Config.BungeeCord.Enable) {
+            logWarn("notifyPlayerLogin: BungeeCord.Enable=false, 未发送 PLAYER_LOGIN for " + playerName);
             return;
         }
         log("notifyPlayerLogin: " + playerName);
