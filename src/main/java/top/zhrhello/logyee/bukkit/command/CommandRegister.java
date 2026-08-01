@@ -19,7 +19,7 @@ public class CommandRegister implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String lable, String[] args){
-        if (args.length != 2) return false;
+        if (args.length != 2 || !(sender instanceof Player)) return false;
         Player player = (Player) sender;
         String name = sender.getName();
         if (LoginPlayerHelper.isLogin(name)) {
@@ -42,32 +42,47 @@ public class CommandRegister implements CommandExecutor {
             return true;
         }
         sender.sendMessage("§e注册中..");
+        final String currentIp;
+        try {
+            if (player.getAddress() == null) {
+                sender.sendMessage("§c无法获取你的IP地址!");
+                return true;
+            }
+            currentIp = player.getAddress().getAddress().getHostAddress();
+        } catch (Exception e) {
+            sender.sendMessage("§c无法获取你的IP地址!");
+            return true;
+        }
+        final java.util.UUID playerUuid = player.getUniqueId();
         Logyee.instance.runTaskAsync(() -> {
             try {
-                String currentIp = player.getAddress().getAddress().getHostAddress();
                 List<LoginPlayer> LoginPlayerListlikeByIp = Logyee.sql.getLikeByIp(currentIp);
                 if (LoginPlayerListlikeByIp.size() >= Config.Settings.IpRegisterCountLimit) {
-                    sender.sendMessage(Config.Language.REGISTER_MORE
-                            .replace("{count}", String.valueOf(LoginPlayerListlikeByIp.size()))
-                            .replace("{accounts}", String.join(", ", LoginPlayerListlikeByIp.stream().map(LoginPlayer::getName).toArray(String[]::new))));
+                    Bukkit.getScheduler().runTask(Logyee.instance, () ->
+                            sender.sendMessage(Config.Language.REGISTER_MORE
+                                    .replace("{count}", String.valueOf(LoginPlayerListlikeByIp.size()))
+                                    .replace("{accounts}", String.join(", ", LoginPlayerListlikeByIp.stream().map(LoginPlayer::getName).toArray(String[]::new)))));
                 } else {
                     LoginPlayer lp = new LoginPlayer(name, args[0]);
                     lp.crypt();
                     Logyee.sql.add(lp);
                     LoginPlayerHelper.add(lp);
                     Bukkit.getScheduler().runTask(Logyee.instance, () -> {
-                        LogyeePlayerRegisterEvent event = new LogyeePlayerRegisterEvent(Bukkit.getPlayer(sender.getName()));
-                        Bukkit.getServer().getPluginManager().callEvent(event);
+                        Player syncPlayer = Bukkit.getPlayer(playerUuid);
+                        if (syncPlayer != null && syncPlayer.isOnline()) {
+                            LogyeePlayerRegisterEvent event = new LogyeePlayerRegisterEvent(syncPlayer);
+                            Bukkit.getServer().getPluginManager().callEvent(event);
+                            syncPlayer.sendMessage(Config.Language.REGISTER_SUCCESS);
+                            syncPlayer.updateInventory();
+                            LoginPlayerHelper.recordCurrentIP(syncPlayer, lp);
+                        }
                     });
-                    sender.sendMessage(Config.Language.REGISTER_SUCCESS);
-                    player.updateInventory();
-                    LoginPlayerHelper.recordCurrentIP(player, lp);
                 }
 
 
             } catch (Exception e) {
                 e.printStackTrace();
-                sender.sendMessage("§c服务器内部错误!");
+                Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c服务器内部错误!"));
             }
         });
         return true;

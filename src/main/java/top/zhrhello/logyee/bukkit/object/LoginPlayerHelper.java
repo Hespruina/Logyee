@@ -85,11 +85,12 @@ public class LoginPlayerHelper {
 
     // 记录登录IP
     public static void recordCurrentIP(Player player, LoginPlayer lp){
+        if (player.getAddress() == null) return;
         String currentIp = player.getAddress().getAddress().getHostAddress();
         List<String> ipsList = lp.getIpsList();
         ipsList.add(currentIp);
         ipsList = ipsList.stream().distinct().collect(Collectors.toList());
-        if (ipsList.size() > 5) {
+        while (ipsList.size() > 5) {
             ipsList.remove(0);
         }
         lp.setIps(String.join(";", ipsList.toArray(new String[0])));
@@ -107,7 +108,7 @@ public class LoginPlayerHelper {
         ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
         PacketContainer inventoryPacket = protocolManager.createPacket(PacketType.Play.Server.WINDOW_ITEMS);
         inventoryPacket.getIntegers().write(0, 0);
-        int inventorySize = 45;
+        int inventorySize = 46;
 
         ItemStack[] blankInventory = new ItemStack[inventorySize];
         Arrays.fill(blankInventory, new ItemStack(Material.AIR));

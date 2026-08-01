@@ -75,34 +75,55 @@ public abstract class SQL {
     }
 
     public List<LoginPlayer> getAll() throws Exception{
-        PreparedStatement ps = new BufferStatement("SELECT * FROM accounts").prepareStatement(getConnection());
-        ResultSet resultSet = ps.executeQuery();
-        List<LoginPlayer> lps = new ArrayList<>();
-        LoginPlayer lp;
-        while (resultSet.next()) {
-            lp = new LoginPlayer(resultSet.getString("name"), resultSet.getString("password"));
-            lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
-            lp.setEmail(resultSet.getString("email"));
-            lp.setIps(resultSet.getString("ips"));
-            lps.add(lp);
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
+        try {
+            ps = new BufferStatement("SELECT * FROM accounts").prepareStatement(getConnection());
+            resultSet = ps.executeQuery();
+            List<LoginPlayer> lps = new ArrayList<>();
+            LoginPlayer lp;
+            while (resultSet.next()) {
+                lp = new LoginPlayer(resultSet.getString("name"), resultSet.getString("password"));
+                lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
+                lp.setEmail(resultSet.getString("email"));
+                lp.setIps(resultSet.getString("ips"));
+                lps.add(lp);
+            }
+            return lps;
+        } finally {
+            if (resultSet != null) {
+                try { resultSet.close(); } catch (Exception ignored) {}
+            }
+            if (ps != null) {
+                try { ps.close(); } catch (Exception ignored) {}
+            }
         }
-        return lps;
-
     }
 
     public List<LoginPlayer> getLikeByIp(String ip) throws Exception{
-        PreparedStatement ps = new BufferStatement("SELECT * FROM accounts WHERE ips like ?", "%" + ip + "%").prepareStatement(getConnection());
-        ResultSet resultSet = ps.executeQuery();
-        List<LoginPlayer> lps = new ArrayList<>();
-        LoginPlayer lp;
-        while (resultSet.next()) {
-            lp = new LoginPlayer(resultSet.getString("name"), resultSet.getString("password"));
-            lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
-            lp.setEmail(resultSet.getString("email"));
-            lp.setIps(resultSet.getString("ips"));
-            lps.add(lp);
+        PreparedStatement ps = null;
+        ResultSet resultSet = null;
+        try {
+            ps = new BufferStatement("SELECT * FROM accounts WHERE ips like ?", "%" + ip + "%").prepareStatement(getConnection());
+            resultSet = ps.executeQuery();
+            List<LoginPlayer> lps = new ArrayList<>();
+            LoginPlayer lp;
+            while (resultSet.next()) {
+                lp = new LoginPlayer(resultSet.getString("name"), resultSet.getString("password"));
+                lp.setLastAction(resultSet.getTimestamp("lastAction").getTime());
+                lp.setEmail(resultSet.getString("email"));
+                lp.setIps(resultSet.getString("ips"));
+                lps.add(lp);
+            }
+            return lps;
+        } finally {
+            if (resultSet != null) {
+                try { resultSet.close(); } catch (Exception ignored) {}
+            }
+            if (ps != null) {
+                try { ps.close(); } catch (Exception ignored) {}
+            }
         }
-        return lps;
     }
 
     public abstract Connection getConnection() throws Exception;
@@ -112,5 +133,15 @@ public abstract class SQL {
         PreparedStatement ps = bufferStatement.prepareStatement(getConnection());
         ps.executeUpdate();
         ps.close();
+    }
+
+    public void close() {
+        try {
+            Connection conn = getConnection();
+            if (conn != null && !conn.isClosed()) {
+                conn.close();
+            }
+        } catch (Exception ignored) {
+        }
     }
 }

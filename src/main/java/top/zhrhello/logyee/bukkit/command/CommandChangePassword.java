@@ -50,9 +50,11 @@ public class CommandChangePassword implements CommandExecutor {
         sender.sendMessage("§e修改中..");
         Logyee.instance.runTaskAsync(() -> {
             try {
-                lp.setPassword(args[1]);
-                lp.crypt();
-                Logyee.sql.edit(lp);
+                LoginPlayer updated = new LoginPlayer(lp.getName(), args[1]);
+                updated.crypt();
+                updated.setEmail(lp.getEmail());
+                updated.setIps(lp.getIps());
+                Logyee.sql.edit(updated);
                 LoginPlayerHelper.remove(lp);
 
                 Bukkit.getScheduler().runTask(Logyee.instance, () -> {
@@ -73,7 +75,7 @@ public class CommandChangePassword implements CommandExecutor {
 
             } catch (Exception e) {
                 e.printStackTrace();
-                sender.sendMessage("§c服务器内部错误!");
+                Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c服务器内部错误!"));
             }
         });
         return true;

@@ -31,7 +31,9 @@ public class ProtocolLibListeners extends PacketAdapter {
         PacketType packetType = event.getPacketType();
         if (packetType == PacketType.Play.Server.SET_SLOT || packetType == PacketType.Play.Server.WINDOW_ITEMS) {
             Player player = event.getPlayer();
+            if (player == null || event.isPlayerTemporary()) return;
             PacketContainer packet = event.getPacket();
+            if (packet.getIntegers().size() == 0) return;
             int windowId = packet.getIntegers().read(0);
             if (windowId == 0 && !LoginPlayerHelper.isLogin(player.getName())) {
                 event.setCancelled(true);

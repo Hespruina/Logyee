@@ -9,10 +9,8 @@ import com.velocitypowered.api.event.player.ServerConnectedEvent;
 import com.velocitypowered.api.proxy.Player;
 import net.kyori.adventure.text.Component;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -24,7 +22,7 @@ import java.util.Set;
  */
 public class Listeners {
 
-    private static final List<String> loggedInPlayerList = new ArrayList<>();
+    private static final Set<String> loggedInPlayerSet = new HashSet<>();
 
     /**
      * 默认命令白名单：插件 Bukkit 端自带的登录、注册、忘记密码等指令及其别名。
@@ -42,24 +40,25 @@ public class Listeners {
     }
 
     public static void markLoggedIn(String playerName) {
-        synchronized (loggedInPlayerList) {
-            if (!loggedInPlayerList.contains(playerName)) {
-                loggedInPlayerList.add(playerName);
-                log("markLoggedIn: " + playerName + " added to list");
+        String lower = playerName.toLowerCase();
+        synchronized (loggedInPlayerSet) {
+            if (loggedInPlayerSet.add(lower)) {
+                log("markLoggedIn: " + playerName + " added to set");
             }
         }
     }
 
     public static void markLoggedOut(String playerName) {
-        synchronized (loggedInPlayerList) {
-            loggedInPlayerList.remove(playerName);
-            log("markLoggedOut: " + playerName + " removed from list");
+        String lower = playerName.toLowerCase();
+        synchronized (loggedInPlayerSet) {
+            loggedInPlayerSet.remove(lower);
+            log("markLoggedOut: " + playerName + " removed from set");
         }
     }
 
     public static boolean isLoggedIn(String playerName) {
-        synchronized (loggedInPlayerList) {
-            return loggedInPlayerList.contains(playerName);
+        synchronized (loggedInPlayerSet) {
+            return loggedInPlayerSet.contains(playerName.toLowerCase());
         }
     }
 
@@ -119,18 +118,13 @@ public class Listeners {
         player.sendMessage(Component.text("\u00a7c\u8bf7\u5148\u767b\u5f55\u540e\u518d\u6267\u884c\u6b64\u6307\u4ee4\uff01"));
 
         // 异步向 Bukkit 查询登录状态，防止玩家刚在子服登录但 Velocity 尚未同步
-        final String originalCommand = command;
         PluginMain.runAsync(() -> {
             try {
                 int result = Communication.sendConnectRequest(playerName);
                 log("onCommand: CONNECT result for " + playerName + " = " + result);
                 if (result == 1) {
                     markLoggedIn(playerName);
-                    // 重新执行被拦截的指令
-                    // CommandExecuteEvent.denied() 会阻止原始执行，
-                    // 确认登录后通过命令管理器重新派发
-                    PluginMain.getInstance().getProxy().getCommandManager()
-                            .executeAsync(player, originalCommand);
+                    player.sendMessage(Component.text("\u00a7a\u4f60\u5df2\u5728\u5b50\u670d\u767b\u5f55\uff0c\u8bf7\u91cd\u65b0\u8f93\u5165\u6307\u4ee4\u3002"));
                 }
             } catch (Exception e) {
                 log("onCommand: error during CONNECT request for " + playerName + ": " + e.getMessage());
@@ -171,20 +165,24 @@ public class Listeners {
      * 如果其中一项是已登录，则拒绝连接（防止重复登录）。
      */
     @Subscribe
-    public void onPreLogin(PreLoginEvent event) {
+    public com.velocitypowered.api.event.EventTask onPreLogin(PreLoginEvent event) {
         String playerName = event.getUsername();
         boolean loggedIn = isLoggedIn(playerName);
         log("onPreLogin: " + playerName + ", loggedIn=" + loggedIn);
         if (loggedIn) {
             log("onPreLogin: rejecting " + playerName + " (already logged in on Velocity)");
-            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.empty()));
-            return;
+            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
+                    Component.text("你已登录，请勿重复连接。")));
+            return null;
         }
-        int result = Communication.sendConnectRequest(playerName);
-        log("onPreLogin: CONNECT result for " + playerName + " = " + result);
-        if (result == 1) {
-            log("onPreLogin: rejecting " + playerName + " (already logged in on Bukkit)");
-            event.setResult(PreLoginEvent.PreLoginComponentResult.denied(Component.empty()));
-        }
+        return com.velocitypowered.api.event.EventTask.async(() -> {
+            int result = Communication.sendConnectRequest(playerName);
+            log("onPreLogin: CONNECT result for " + playerName + " = " + result);
+            if (result == 1) {
+                log("onPreLogin: rejecting " + playerName + " (already logged in on Bukkit)");
+                event.setResult(PreLoginEvent.PreLoginComponentResult.denied(
+                        Component.text("你已在子服登录，请勿重复连接。")));
+            }
+        });
     }
 }

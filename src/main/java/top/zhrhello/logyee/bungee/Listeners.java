@@ -8,10 +8,8 @@ import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 import net.md_5.bungee.event.EventPriority;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,7 +17,7 @@ import java.util.Set;
  */
 public class Listeners implements Listener {
 
-    private static final List<String> loggedInPlayerList = new ArrayList<>();
+    private static final Set<String> loggedInPlayerSet = new HashSet<>();
 
     /**
      * 默认命令白名单：插件 Bukkit 端自带的登录、注册、忘记密码等指令及其别名。
@@ -38,24 +36,25 @@ public class Listeners implements Listener {
     }
 
     public static void markLoggedIn(String playerName) {
-        synchronized (loggedInPlayerList) {
-            if (!loggedInPlayerList.contains(playerName)) {
-                loggedInPlayerList.add(playerName);
-                log("markLoggedIn: " + playerName + " added to list");
+        String lower = playerName.toLowerCase();
+        synchronized (loggedInPlayerSet) {
+            if (loggedInPlayerSet.add(lower)) {
+                log("markLoggedIn: " + playerName + " added to set");
             }
         }
     }
 
     public static void markLoggedOut(String playerName) {
-        synchronized (loggedInPlayerList) {
-            loggedInPlayerList.remove(playerName);
-            log("markLoggedOut: " + playerName + " removed from list");
+        String lower = playerName.toLowerCase();
+        synchronized (loggedInPlayerSet) {
+            loggedInPlayerSet.remove(lower);
+            log("markLoggedOut: " + playerName + " removed from set");
         }
     }
 
     public static boolean isLoggedIn(String playerName) {
-        synchronized (loggedInPlayerList) {
-            return loggedInPlayerList.contains(playerName);
+        synchronized (loggedInPlayerSet) {
+            return loggedInPlayerSet.contains(playerName.toLowerCase());
         }
     }
 
@@ -180,18 +179,24 @@ public class Listeners implements Listener {
         log("onPreLogin: " + playerName + ", loggedIn=" + loggedIn);
         if (loggedIn) {
             log("onPreLogin: rejecting " + playerName + " (already logged in on Bungee)");
-            event.setCancelReason(new TextComponent(""));
+            event.setCancelReason(new TextComponent("你已登录，请勿重复连接。"));
             event.setCancelled(true);
             return;
         }
-        int result = Communication.sendConnectRequest(playerName);
-        log("onPreLogin: CONNECT result for " + playerName + " = " + result);
-        if (result == 1) {
-            log("onPreLogin: rejecting " + playerName + " (already logged in on Bukkit)");
-            event.setCancelReason(new TextComponent(""));
-            event.setCancelled(true);
-        }
-
+        event.registerIntent(PluginMain.instance);
+        PluginMain.runAsync(() -> {
+            try {
+                int result = Communication.sendConnectRequest(playerName);
+                log("onPreLogin: CONNECT result for " + playerName + " = " + result);
+                if (result == 1) {
+                    log("onPreLogin: rejecting " + playerName + " (already logged in on Bukkit)");
+                    event.setCancelReason(new TextComponent("你已在子服登录，请勿重复连接。"));
+                    event.setCancelled(true);
+                }
+            } finally {
+                event.completeIntent(PluginMain.instance);
+            }
+        });
     }
 
 

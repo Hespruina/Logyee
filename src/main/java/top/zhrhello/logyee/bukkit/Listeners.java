@@ -17,6 +17,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.*;
 
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 public class Listeners implements Listener {
@@ -52,12 +53,14 @@ public class Listeners implements Listener {
         }
         if (LoginPlayerHelper.isLogin(name)) {
             event.disallow(AsyncPlayerPreLoginEvent.Result.KICK_OTHER, "玩家 " + lp.getName() + " 已经在线了!");
+            return;
         }
+        if (Config.Settings.IpCountLimit <= 0) return;
+        if (event.getAddress() == null) return;
         int count = 0;
         String hostAddress = event.getAddress().getHostAddress();
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            String ip = p.getAddress().getAddress().getHostAddress();
-            if (ip.equals(hostAddress)) {
+        for (Player p : new ArrayList<>(Bukkit.getOnlinePlayers())) {
+            if (p.getAddress() != null && hostAddress.equals(p.getAddress().getAddress().getHostAddress())) {
                 count++;
             }
             if (count >= Config.Settings.IpCountLimit) {

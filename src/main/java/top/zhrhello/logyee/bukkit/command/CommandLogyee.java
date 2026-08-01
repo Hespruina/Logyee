@@ -100,7 +100,17 @@ public class CommandLogyee implements CommandExecutor {
             String[] cmd = new String[args.length - 1];
             System.arraycopy(args, 1, cmd, 0, cmd.length);
             String regex = String.join(" ", cmd);
-            Pattern pattern = Pattern.compile(regex);
+            if (regex.length() > 256) {
+                sender.sendMessage("§c正则表达式过长!");
+                return true;
+            }
+            Pattern pattern;
+            try {
+                pattern = Pattern.compile(regex);
+            } catch (java.util.regex.PatternSyntaxException e) {
+                sender.sendMessage("§c无效的正则表达式: " + e.getMessage());
+                return true;
+            }
             List<String> collect = Config.Settings.CommandWhiteList.stream().map(Pattern::toString).collect(Collectors.toList());
             if (collect.contains(regex)) {
                 sender.sendMessage("§c已经存在 " + regex);
@@ -240,16 +250,15 @@ public class CommandLogyee implements CommandExecutor {
                     try {
                         Logyee.sql.del(lp.getName());
                         LoginPlayerHelper.remove(lp);
-                        sender.sendMessage("§e已删除账户 §a" + lp.getName());
                         Bukkit.getScheduler().runTask(Logyee.instance, () -> {
+                            sender.sendMessage("§e已删除账户 §a" + lp.getName());
                             Player p = Bukkit.getPlayerExact(lp.getName());
                             if (p != null && p.isOnline()) {
                                 p.kickPlayer("§c你的账户已被删除!");
                             }
-
                         });
                     } catch (Exception e) {
-                        sender.sendMessage("§c数据库异常!");
+                        Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c数据库异常!"));
                         e.printStackTrace();
                     }
 
@@ -280,21 +289,23 @@ public class CommandLogyee implements CommandExecutor {
                     lp.crypt();
                     try {
                         Logyee.sql.add(lp);
-                        sender.sendMessage("§a指定账户不存在,现已注册..");
+                        Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§a指定账户不存在,现已注册.."));
                     } catch (Exception e) {
-                        sender.sendMessage("§c数据库异常!");
+                        Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c数据库异常!"));
                         e.printStackTrace();
                     }
                 } else {
-                    lp.setPassword(pwd);
-                    lp.crypt();
+                    final LoginPlayer finalLp = lp;
+                    LoginPlayer updated = new LoginPlayer(finalLp.getName(), pwd);
+                    updated.crypt();
+                    updated.setEmail(finalLp.getEmail());
+                    updated.setIps(finalLp.getIps());
                     try {
-                        Logyee.sql.edit(lp);
-                        LoginPlayerHelper.remove(lp);
-                        sender.sendMessage(String.join(" ", "§a玩家", lp.getName(), "密码已设置"));
-                        LoginPlayer finalLp = lp;
+                        Logyee.sql.edit(updated);
+                        LoginPlayerHelper.remove(finalLp);
                         Bukkit.getScheduler().runTask(Logyee.instance, () -> {
-                            Player p = Bukkit.getPlayer(finalLp.getName());
+                            sender.sendMessage(String.join(" ", "§a玩家", finalLp.getName(), "密码已设置"));
+                            Player p = Bukkit.getPlayerExact(finalLp.getName());
                             if (p != null && p.isOnline()) {
                                 p.sendMessage("§c密码已被管理员重新设置,请重新登录");
                                 if (Config.Settings.CanTpSpawnLocation) {
@@ -304,10 +315,9 @@ public class CommandLogyee implements CommandExecutor {
                                     }
                                 }
                             }
-
                         });
                     } catch (Exception e) {
-                        sender.sendMessage("§c数据库异常!");
+                        Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c数据库异常!"));
                         e.printStackTrace();
                     }
                 }
@@ -323,6 +333,9 @@ public class CommandLogyee implements CommandExecutor {
     private boolean reload(CommandSender sender, String[] args){
         if (args.length > 0 && args[0].equalsIgnoreCase("reload")) {
             Config.reload();
+            if (Logyee.sql != null) {
+                Logyee.sql.close();
+            }
             Logyee.sql = Config.MySQL.Enable ? new MySQL(Logyee.instance) : new SQLite(Logyee.instance);
             try {
 

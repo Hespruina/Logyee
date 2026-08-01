@@ -81,6 +81,8 @@ public class Communication {
 
     private static void closeSocket() {
         connected = false;
+        PENDING_RESULTS.forEach((key, future) -> future.complete(0));
+        PENDING_RESULTS.clear();
         synchronized (WRITE_LOCK) {
             try {
                 if (socket != null) socket.close();
@@ -115,7 +117,11 @@ public class Communication {
                 switch (parts[0]) {
                     case "CONNECT_RESULT":
                         if (parts.length >= 3) {
-                            handleConnectResult(parts[1], Integer.parseInt(parts[2]));
+                            try {
+                                handleConnectResult(parts[1], Integer.parseInt(parts[2]));
+                            } catch (NumberFormatException e) {
+                                logWarn("Invalid CONNECT_RESULT port: " + parts[2]);
+                            }
                         }
                         break;
                     case "PLAYER_LOGIN":

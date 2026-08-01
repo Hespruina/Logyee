@@ -98,13 +98,13 @@ public class CommandBindEmail implements CommandExecutor {
                                     Player syncPlayer = Bukkit.getPlayer(((Player) sender).getUniqueId());
                                     if (syncPlayer != null && syncPlayer.isOnline()) {
                                         syncPlayer.sendMessage("§a邮箱已绑定 " + bindEmail.getEmail() + " 忘记密码时可以用邮箱重置自己的密码");
-                                        EmailCode.removeByName(name, EmailCode.Type.Bind);
                                     }
+                                    EmailCode.removeByName(name, EmailCode.Type.Bind);
                                 });
 
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                sender.sendMessage("§c服务器内部错误!");
+                                Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c服务器内部错误!"));
                             }
                         });
 
@@ -121,6 +121,7 @@ public class CommandBindEmail implements CommandExecutor {
             return true;
         }
 
-        return true;
+        sender.sendMessage("§c用法: /bindemail set <邮箱> 或 /bindemail verify <验证码>");
+        return false;
     }
 }

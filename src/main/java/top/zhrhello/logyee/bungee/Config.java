@@ -29,14 +29,18 @@ public class Config {
         File dataFolder = PluginMain.instance.getDataFolder();
 
         if (!dataFolder.exists()) {
-            dataFolder.mkdir();
+            dataFolder.mkdirs();
         }
 
         String fileName = "bungeecord.yml";
         File configFile = new File(dataFolder, fileName);
         if (!configFile.exists()) {
             try (InputStream in = PluginMain.instance.getResourceAsStream("bungee-resources/bungeecord.yml")) {
-                Files.copy(in, configFile.toPath());
+                if (in == null) {
+                    PluginMain.instance.getLogger().warning("Default bungeecord.yml not found in resources!");
+                } else {
+                    Files.copy(in, configFile.toPath());
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }

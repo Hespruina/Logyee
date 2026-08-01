@@ -78,6 +78,7 @@ public class CommandResetPassword implements CommandExecutor {
                         }
                         sender.sendMessage("§e密码重置中..");
                         Logyee.instance.runTaskAsync(() -> {
+                            String oldPassword = lp.getPassword();
                             lp.setPassword(pwd);
                             lp.crypt();
                             try {
@@ -99,6 +100,7 @@ public class CommandResetPassword implements CommandExecutor {
 
                                 });
                             } catch (Exception e) {
+                                lp.setPassword(oldPassword);
                                 Bukkit.getScheduler().runTask(Logyee.instance, () -> sender.sendMessage("§c数据库异常!"));
                                 e.printStackTrace();
                             }
