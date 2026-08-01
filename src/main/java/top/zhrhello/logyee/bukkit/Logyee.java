@@ -16,9 +16,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-import top.zhrhello.logyee.libs.bstats.bukkit.Metrics;
-import top.zhrhello.logyee.libs.bstats.charts.SimplePie;
-import top.zhrhello.logyee.libs.bstats.charts.SingleLineChart;
+import org.bstats.bukkit.Metrics;
+import org.bstats.charts.SimplePie;
+import org.bstats.charts.SingleLineChart;
 
 public class Logyee extends JavaPlugin {
 

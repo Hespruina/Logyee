@@ -2,8 +2,8 @@ package top.zhrhello.logyee.bungee;
 
 import net.md_5.bungee.api.plugin.Plugin;
 import net.md_5.bungee.api.scheduler.ScheduledTask;
-import top.zhrhello.logyee.libs.bstats.bungeecord.Metrics;
-import top.zhrhello.logyee.libs.bstats.charts.SingleLineChart;
+import org.bstats.bungeecord.Metrics;
+import org.bstats.charts.SingleLineChart;
 
 /**
  * Bungee Cord 主类

@@ -9,8 +9,8 @@ import com.velocitypowered.api.plugin.annotation.DataDirectory;
 import com.velocitypowered.api.proxy.ProxyServer;
 import org.slf4j.Logger;
 
-import top.zhrhello.logyee.libs.bstats.charts.SingleLineChart;
-import top.zhrhello.logyee.libs.bstats.velocity.Metrics;
+import org.bstats.charts.SingleLineChart;
+import org.bstats.velocity.Metrics;
 
 import java.nio.file.Path;
 
