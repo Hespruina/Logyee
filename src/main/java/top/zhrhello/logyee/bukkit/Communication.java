@@ -188,6 +188,11 @@ public class Communication {
         log("Processing CONNECT for " + playerName);
         Bukkit.getScheduler().runTask(Logyee.instance, () -> {
             boolean result = LoginPlayerHelper.isLogin(playerName);
+            if (result && Bukkit.getPlayerExact(playerName) == null) {
+                log("CONNECT: " + playerName + " is in login set but NOT online — cleaning stale entry");
+                LoginPlayerHelper.remove(playerName, false);
+                result = false;
+            }
             log("CONNECT result for " + playerName + " = " + result);
             sendLine("CONNECT_RESULT " + playerName + " " + (result ? 1 : 0));
         });
